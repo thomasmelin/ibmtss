@@ -48,7 +48,7 @@
 
 extern int tssVerbose;
 
-#ifdef TPM_TSS_NO_PRINT
+#ifdef CVTPM_TSS_NO_PRINT   //TPM_TSS_NO_PRINT
 
 /* false to compile out printf */
 int tssSwallowRc = 0;
