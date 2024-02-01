@@ -57,8 +57,14 @@
 extern "C" {
 #endif
 
+    typedef void (*TSS_PrintfCallback)(char *);
+    LIB_EXPORT
+        int TSS_Printf(const char* str, ...);
+    LIB_EXPORT
+        void TSS_SetPrintfCallback(TSS_PrintfCallback);
+
 #ifdef TPM_TSS_NO_PRINT
-#defINE CVTPM_TSS_NO_PRINT
+#define CVTPM_TSS_NO_PRINT
 #endif
 
 #ifdef CVTPM_TSS_NO_PRINT
@@ -71,6 +77,9 @@ extern "C" {
 //#define printf tssSwallowRc = 0 && TSS_SwallowPrintf
 #define printf TSS_SwallowPrintf
 
+#elif TPM_TSS_PRINT_TO_CALLBACK
+
+#define printf TSS_Printf
 #endif
 
     LIB_EXPORT

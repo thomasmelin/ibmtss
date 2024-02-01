@@ -36,6 +36,7 @@
 /* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.		*/
 /********************************************************************************/
 
+#include <stdarg.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +61,131 @@ int TSS_SwallowPrintf(const char *format, ...)
 }
 
 #endif
+
+static char tssLogString[4000];
+static TSS_PrintfCallback tssPrintfCallback = 0;
+
+void TSS_SetPrintfCallback(TSS_PrintfCallback func)
+{
+    tssPrintfCallback = func;
+}
+
+int TSS_Printf(const char* fmt, ...)
+{
+    // initializing list pointer
+    va_list aptr;
+    va_start(aptr, fmt);
+
+    int ret = vsprintf(tssLogString, fmt, aptr);
+
+    // ending traversal 
+    va_end(aptr);
+
+//    fprintf(stdout, "TSS_Printf: %s\n", tssLogString);
+    if (tssPrintfCallback)
+        tssPrintfCallback(tssLogString);
+    return ret;
+}
+
+int TSS_Printf2(const char* str, ...)
+{
+    // initializing list pointer
+    va_list ptr;
+    va_start(ptr, str);
+
+    // char array to store token
+    char token[1000];
+    // index of where to store the characters of str in token
+    int k = 0;
+
+    // parsing the formatted string
+    for (int i = 0; str[i] != '\0'; i++) {
+        token[k++] = str[i];
+
+        if (str[i + 1] == '%' || str[i + 1] == '\0') {
+            token[k] = '\0';
+            k = 0;
+            if (token[0] != '%') {
+                sprintf(tssLogString, "%s", token); // printing the whole token if it is not a format specifier.
+            }
+            else {
+                int j = 1;
+                char ch1 = 0;
+
+                // this loop is required when printing
+                // formatted value like 0.2f, when ch1='f' loop ends.
+                while ((ch1 = token[j++]) < 58) {
+                }
+                // for integers
+                if (ch1 == 'i' || ch1 == 'd' || ch1 == 'u' || ch1 == 'h' || ch1 == 'x') {
+                    sprintf(tssLogString, token,
+                        va_arg(ptr, int));
+                }
+                // for characters
+                else if (ch1 == 'c') {
+                    sprintf(tssLogString, token,
+                        va_arg(ptr, int));
+                }
+                // for float values
+                else if (ch1 == 'f') {
+                    sprintf(tssLogString, token,
+                        va_arg(ptr, double));
+                }
+                else if (ch1 == 'l') {
+                    char ch2 = token[2];
+
+                    // for long int
+                    if (ch2 == 'u' || ch2 == 'd'
+                        || ch2 == 'i') {
+                        sprintf(tssLogString, token,
+                            va_arg(ptr, long));
+                    }
+
+                    // for double
+                    else if (ch2 == 'f') {
+                        sprintf(tssLogString, token,
+                            va_arg(ptr, double));
+                    }
+                }
+                else if (ch1 == 'L') {
+                    char ch2 = token[2];
+
+                    // for long long int
+                    if (ch2 == 'u' || ch2 == 'd'
+                        || ch2 == 'i') {
+                        sprintf(tssLogString, token,
+                            va_arg(ptr, long long));
+                    }
+
+                    // for long double
+                    else if (ch2 == 'f') {
+                        sprintf(tssLogString, token,
+                            va_arg(ptr, long double));
+                    }
+                }
+
+                // for strings
+                else if (ch1 == 's') {
+                    sprintf(tssLogString, token,
+                        va_arg(ptr, char*));
+                }
+
+                // print the whole token if no case is matched
+                else {
+                    sprintf(tssLogString, "%s", token);
+                }
+            }
+        }
+    }
+
+    // ending traversal 
+    va_end(ptr);
+
+    fprintf(stdout, "TSS_Printf: %s\n", tssLogString);
+    if (tssPrintfCallback)
+        tssPrintfCallback(tssLogString);
+    return 0;
+}
 
 #ifndef TPM_TSS_NOFILE
 /* TSS_Array_Scan() converts a string to a binary array */
