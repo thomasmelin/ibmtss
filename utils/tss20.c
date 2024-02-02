@@ -2662,11 +2662,11 @@ static TPM_RC TSS_ObjectPublic_GetSlotForHandle(TSS_CONTEXT *tssContext,
     size_t 	i;
 
     /* search all slots for handle */
-    for (i = 0 ; i < (sizeof(tssContext->sessions) / sizeof(TSS_SESSIONS)) ; i++) {
-	if (tssContext->objectPublic[i].objectHandle == handle) {
-	    *slotIndex = i;
-	    return 0;
-	}
+    for (i = 0; i < (sizeof(tssContext->sessions) / sizeof(TSS_SESSIONS)); i++) {
+        if (tssContext->objectPublic[i].objectHandle == handle) {
+            *slotIndex = i;
+            return 0;
+        }
     }
     return TSS_RC_NO_OBJECTPUBLIC_SLOT;
 }	
@@ -2681,16 +2681,18 @@ static TPM_RC TSS_ObjectPublic_DeleteData(TSS_CONTEXT *tssContext, TPM_HANDLE ha
     size_t	slotIndex;
 
     if (rc == 0) {
-	rc = TSS_ObjectPublic_GetSlotForHandle(tssContext, &slotIndex, handle);
-	if (rc != 0) {
-	    if (tssVerbose)
-		printf("TSS_ObjectPublic_DeleteData: Error, no slot found for handle %08x\n",
-		       handle);
-	}
-    }    
-    if (rc == 0) {
-	tssContext->objectPublic[slotIndex].objectHandle = TPM_RH_NULL;
+        rc = TSS_ObjectPublic_GetSlotForHandle(tssContext, &slotIndex, handle);
+        if (rc != 0) {
+            if (tssVerbose)
+                printf("TSS_ObjectPublic_DeleteData: Error, no slot found for handle %08x\n",
+                    handle);
+        }
     }
+    if (rc == 0) {
+        tssContext->objectPublic[slotIndex].objectHandle = TPM_RH_NULL;
+    }
+	else if (rc == TSS_RC_NO_OBJECTPUBLIC_SLOT)	// That just means that there is nothing to delete. Not really en error, is it?
+		rc = 0;
     return rc;
 }
 
@@ -2713,36 +2715,36 @@ static TPM_RC TSS_DeleteHandle(TSS_CONTEXT *tssContext,
 #ifndef TPM_TSS_NOFILE
     /* delete the Name */
     if (rc == 0) {
-	sprintf(filename, "%s/h%08x.bin", tssContext->tssDataDirectory, handle);
-	if (tssVverbose) printf("TSS_DeleteHandle: delete Name file %s\n", filename);
-	rc = TSS_File_DeleteFile(filename);
+        sprintf(filename, "%s/h%08x.bin", tssContext->tssDataDirectory, handle);
+        if (tssVverbose) printf("TSS_DeleteHandle: delete Name file %s\n", filename);
+        rc = TSS_File_DeleteFile(filename);
     }
     /* delete the public if it exists */
     if (rc == 0) {
-	if ((handleType == TPM_HT_TRANSIENT) ||
-	    (handleType == TPM_HT_PERSISTENT)) {
-	    sprintf(filename, "%s/hp%08x.bin", tssContext->tssDataDirectory, handle);
-	    if (tssVverbose) printf("TSS_DeleteHandle: delete public file %s\n", filename);
-	    TSS_File_DeleteFile(filename);
-	}
+        if ((handleType == TPM_HT_TRANSIENT) ||
+            (handleType == TPM_HT_PERSISTENT)) {
+            sprintf(filename, "%s/hp%08x.bin", tssContext->tssDataDirectory, handle);
+            if (tssVverbose) printf("TSS_DeleteHandle: delete public file %s\n", filename);
+            TSS_File_DeleteFile(filename);
+        }
     }
 #else
     /* sessions persist in the context and can be deleted */
     if (rc == 0) {
-	switch (handleType) {
-	  case TPM_HT_NV_INDEX:
-	    rc = TSS_RC_NOT_IMPLEMENTED;
-	    break;
-	  case TPM_HT_HMAC_SESSION:
-	  case TPM_HT_POLICY_SESSION:
-	    if (tssVverbose) printf("TSS_DeleteHandle: delete session state %08x\n", handle);
-	    rc = TSS_HmacSession_DeleteData(tssContext, handle);
-	    break;
-	  case TPM_HT_TRANSIENT:
-	  case TPM_HT_PERSISTENT:
-	    rc = TSS_ObjectPublic_DeleteData(tssContext, handle);
-	    break;
-	}
+        switch (handleType) {
+        case TPM_HT_NV_INDEX:
+            rc = TSS_RC_NOT_IMPLEMENTED;
+            break;
+        case TPM_HT_HMAC_SESSION:
+        case TPM_HT_POLICY_SESSION:
+            if (tssVverbose) printf("TSS_DeleteHandle: delete session state %08x\n", handle);
+            rc = TSS_HmacSession_DeleteData(tssContext, handle);
+            break;
+        case TPM_HT_TRANSIENT:
+        case TPM_HT_PERSISTENT:
+            rc = TSS_ObjectPublic_DeleteData(tssContext, handle);
+            break;
+        }
     }
 #endif
     return rc;
@@ -4892,31 +4894,32 @@ static TPM_RC TSS_PO_EvictControl(TSS_CONTEXT *tssContext,
     out = out;
     extra = extra;
     
-    if (tssVverbose) printf("TSS_PO_EvictControl: object %08x persistent %08x\n",
-			    in->objectHandle, in->persistentHandle);
+    if (tssVverbose)
+        printf("TSS_PO_EvictControl: object %08x persistent %08x\n",
+            in->objectHandle, in->persistentHandle);
     /* if it successfully made a persistent copy */
     if (in->objectHandle != in->persistentHandle) {
-	/* TPM2B_PUBLIC	bPublic; */
-	if (rc == 0) {
-	    rc = TSS_Name_Copy(tssContext,
-			       in->persistentHandle, NULL,	/* to persistent handle */
-			       in->objectHandle, NULL);		/* from transient handle */	
-	}
-	/* get the transient object public key */
-	/* copy it to the persistent object public key */
-	if (rc == 0) {
-	    rc = TSS_Public_Copy(tssContext,
-				 in->persistentHandle,
-				 NULL,
-				 in->objectHandle,
-				 NULL);
-	}
+        /* TPM2B_PUBLIC	bPublic; */
+        if (rc == 0) {
+            rc = TSS_Name_Copy(tssContext,
+                in->persistentHandle, NULL,	/* to persistent handle */
+                in->objectHandle, NULL);		/* from transient handle */
+        }
+        /* get the transient object public key */
+        /* copy it to the persistent object public key */
+        if (rc == 0) {
+            rc = TSS_Public_Copy(tssContext,
+                in->persistentHandle,
+                NULL,
+                in->objectHandle,
+                NULL);
+        }
     }
     /* if it successfully evicted the persistent object */
     else {
-	if (rc == 0) {
-	    rc = TSS_DeleteHandle(tssContext, in->persistentHandle);
-	}
+        if (rc == 0) {
+            rc = TSS_DeleteHandle(tssContext, in->persistentHandle);
+        }
     }
     return rc;
 }

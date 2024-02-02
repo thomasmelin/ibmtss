@@ -48,6 +48,7 @@
 
 #include <ibmtss/tss.h>
 #include <ibmtss/tssutils.h>
+#include <ibmtss/tssfile.h>
 #include <ibmtss/tssresponsecode.h>
 #include <ibmtss/tssmarshal.h>
 
