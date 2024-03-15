@@ -686,7 +686,8 @@ TPM_RC TSS_Socket_Close(TSS_CONTEXT *tssContext)
 
 static void TSS_Socket_PrintError(int err)
 {
-    DWORD rc;
+#ifndef TPM_NOSOCKET
+	DWORD rc;
     char *buffer = NULL;
     /* mingw seems to output UTF-8 for FormatMessage().  For Visual Studio, FormatMessage() outputs
        UTF-16, which would require wprintf(). FormatMessageA() outputs UTF-8, permitting printf()
@@ -702,6 +703,7 @@ static void TSS_Socket_PrintError(int err)
 	printf("%s\n", buffer);
     }
     LocalFree(buffer);
+#endif
     return;
 }
 #endif

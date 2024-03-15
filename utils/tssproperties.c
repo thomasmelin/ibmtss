@@ -166,7 +166,11 @@ TPM_RC TSS_Properties_Init(TSS_CONTEXT *tssContext)
 	tssContext->tssFirstTransmit = TRUE;	/* connection not opened */
 	tssContext->tpm12Command = FALSE;
 #ifdef TPM_WINDOWS
+
+#ifndef TPM_NOSOCKET
 	tssContext->sock_fd = INVALID_SOCKET;
+#endif 	/* TPM_NOSOCKET */
+
 #endif
 #ifdef TPM_POSIX
 #ifndef TPM_NOSOCKET
